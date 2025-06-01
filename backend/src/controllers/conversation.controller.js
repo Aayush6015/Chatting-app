@@ -1,4 +1,4 @@
-import Conversation  from "../models/conversation.model.js";
+import Conversation from "../models/conversation.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloud } from "../utils/cloudinary.js"
@@ -10,94 +10,107 @@ import { conversationHelpers } from "../models/index.js";
 
 
 const createOrGetConversation = asyncHandler(async (req, res) => {
-    const { targetUserId } = req.body;
+  const { targetUserId } = req.body;
 
-    // Validate input
-    if (!targetUserId) {
-        throw new ApiError(400, "Target user ID is required");
-    }
+  // Validate input
+  if (!targetUserId) {
+    throw new ApiError(400, "Target user ID is required");
+  }
 
-    const currentUserId = req.user._id;
+  const currentUserId = req.user._id;
 
-    // Prevent creating conversation with self
-    if (currentUserId.toString() === targetUserId.toString()) {
-        throw new ApiError(400, "Cannot create conversation with yourself");
-    }
+  // Prevent creating conversation with self
+  if (currentUserId.toString() === targetUserId.toString()) {
+    throw new ApiError(400, "Cannot create conversation with yourself");
+  }
 
-    // Find or create conversation
-    const conversation = await conversationHelpers.findOrCreateConversation(currentUserId, targetUserId);
+  // Find or create conversation
+  const conversation = await conversationHelpers.findOrCreateConversation(currentUserId, targetUserId);
 
-    // Populate participants and last message for frontend display
-    await conversation.populate('participants', 'username profilePicture email');
-    await conversation.populate('lastMessage');
+  // Populate participants and last message for frontend display
+  await conversation.populate('participants', 'username profilePicture email');
+  await conversation.populate('lastMessage');
 
-    return res
-        .status(200)
-        .json(new ApiResponse(200, conversation, "Conversation fetched successfully"));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, conversation, "Conversation fetched successfully"));
 });
 
 const getAllConversationsForUser = asyncHandler(async (req, res) => {
-    const userId = req.user._id;
-  
-    const conversations = await conversationHelpers.getUserConversationsWithDetails(userId);
-  
-    return res
-      .status(200)
-      .json(new ApiResponse(200, conversations, "Fetched user conversations"));
-  });
-  
-const deleteConversation = asyncHandler(async (req, res) => {
-    const { conversationId } = req.body;
-    const userId = req.user?._id;
-  
-    const conversation = await Conversation.findById(conversationId);
-  
-    if (!conversation) {
-      throw new ApiError(404, "Conversation not found");
-    }
-  
-    if (!conversation.participants.includes(userId)) {
-      throw new ApiError(403, "Not authorized to delete this conversation");
-    }
-  
-    await Conversation.findByIdAndDelete(conversationId);
-    await Message.deleteMany({ conversation: conversationId });
+  const userId = req.user._id;
+  const { page = 1, limit = 10 } = req.query;
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const conversations = await conversationHelpers.getUserConversationsWithDetails(userId)
+    .sort({ updatedAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit))
+    .populate("participants", "username profilePicture")
+    .populate("lastMessage");
 
-    const io = req.app.get("io");
-    conversation.participants.forEach(participantId => {
-        io.to(participantId.toString()).emit("conversation-deleted", { conversationId });
-    });
-  
-    return res
-      .status(200)
-      .json(new ApiResponse(200, {}, "Conversation deleted successfully"));
+  const total = await Conversation.countDocuments({ participants: userId });
+
+
+  return res.status(200).json(new ApiResponse(200, {
+    conversations,
+    totalPages: Math.ceil(total / limit),
+    currentPage: parseInt(page)
+  }, "Conversations fetched"));
+});
+
+const deleteConversation = asyncHandler(async (req, res) => {
+  const { conversationId } = req.body;
+  const userId = req.user?._id;
+
+  const conversation = await Conversation.findById(conversationId);
+
+  if (!conversation) {
+    throw new ApiError(404, "Conversation not found");
+  }
+
+  if (!conversation.participants.includes(userId)) {
+    throw new ApiError(403, "Not authorized to delete this conversation");
+  }
+
+  await Conversation.findByIdAndDelete(conversationId);
+  await Message.deleteMany({ conversation: conversationId });
+
+  await redis.del(`messages:${conversationId}:*`);
+
+  const io = req.app.get("io");
+  conversation.participants.forEach(participantId => {
+    io.to(participantId.toString()).emit("conversation-deleted", { conversationId });
   });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Conversation deleted successfully"));
+});
 
 const getConversationById = asyncHandler(async (req, res) => {
-    const { conversationId } = req.params;
-  
-    const conversation = await Conversation.findById(conversationId)
-      .populate('participants', 'username profilePicture email')
-      .populate('lastMessage');
+  const { conversationId } = req.params;
 
-      const io = req.app.get("io");
-      io.to(targetUserId.toString()).emit("new-conversation", conversation);
-  
-    if (!conversation) {
-      throw new ApiError(404, "Conversation not found");
-    }
-  
-    return res
-      .status(200)
-      .json(new ApiResponse(200, conversation, "Conversation details fetched"));
-  });
-  
+  const conversation = await Conversation.findById(conversationId)
+    .populate('participants', 'username profilePicture email')
+    .populate('lastMessage');
+
+  const io = req.app.get("io");
+  io.to(targetUserId.toString()).emit("new-conversation", conversation);
+
+  if (!conversation) {
+    throw new ApiError(404, "Conversation not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, conversation, "Conversation details fetched"));
+});
+
 
 
 export {
-    createOrGetConversation,
-    getAllConversationsForUser,
-    deleteConversation,
-    getConversationById
+  createOrGetConversation,
+  getAllConversationsForUser,
+  deleteConversation,
+  getConversationById
 
 }

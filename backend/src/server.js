@@ -51,14 +51,16 @@
 //     });
 // });
 
-
 import 'dotenv/config';
 import express from "express";
 import { app } from './app.js';
 import connectDB from './db/db.js';
 import { Server } from 'socket.io';
 import http from 'http';
-import jwt from 'jsonwebtoken'; // ⬅️ Add this
+import jwt from 'jsonwebtoken';
+import redis from './utils/cache.js';
+
+// await redis.connect();
 
 const server = http.createServer(app);
 
@@ -72,7 +74,7 @@ const io = new Server(server, {
 
 app.set("io", io);
 
-// ⬇️ Authenticate socket before allowing connection
+// Authenticate socket before allowing connection
 io.use((socket, next) => {
     const token = socket.handshake.auth?.token;
 
@@ -94,7 +96,7 @@ io.on("connection", (socket) => {
 
     // Join user to their personal room (for notifications)
     if (socket.userId) {
-        socket.join(socket.userId); // ⬅️ userId-based room
+        socket.join(socket.userId);
         console.log(`Socket ${socket.id} joined room ${socket.userId}`);
     }
 
@@ -104,10 +106,32 @@ io.on("connection", (socket) => {
         console.log(`User ${socket.id} joined conversation ${conversationId}`);
     });
 
-    // Receive and broadcast message to other participants
+    // Broadcast received message
     socket.on("new-message", (message) => {
         const { conversationId, ...msgData } = message;
+
+        // Emit to conversation room
         socket.to(conversationId).emit("receive-message", msgData);
+
+        // Emit real-time notification to all recipients
+        if (msgData.recipients && Array.isArray(msgData.recipients)) {
+            msgData.recipients.forEach(recipientId => {
+                if (recipientId !== socket.userId) {
+                    io.to(recipientId).emit("notify-message", {
+                        conversationId,
+                        message: msgData,
+                    });
+                }
+            });
+        }
+    });
+
+    // Handle marking messages as read
+    socket.on("mark-read", ({ conversationId, readerId }) => {
+        io.to(conversationId).emit("messages-read", {
+            conversationId,
+            readerId
+        });
     });
 
     socket.on("disconnect", () => {

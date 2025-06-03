@@ -25,6 +25,7 @@ app.on("error",(error)=>{
 import userRouter from "./routes/user.routes.js"
 import conversationRouter from "./routes/conversation.routes.js"
 import messageRouter from "./routes/message.routes.js"
+import googleAuthRoutes from "./routes/auth/google.routes.js"
 
 //routes declaration
 app.use("/api/v1/users",userRouter)

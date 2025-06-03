@@ -45,7 +45,15 @@ const userSchema = new mongoose.Schema({
   refreshToken: {
     type: String,
 
-  }
+  },
+  isGoogleUser: {
+    type: Boolean,
+    default: false
+  },
+  resetPasswordToken: { type: String },
+  resetPasswordExpires: { type: Date },
+
+
 }, {
   timestamps: true // adds createdAt and updatedAt automatically
 });
@@ -57,29 +65,29 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-userSchema.methods.generateAccessToken = function(){ // error - use "function" keyword to make function when we use "this"
+userSchema.methods.generateAccessToken = function () { // error - use "function" keyword to make function when we use "this"
   return jwt.sign({
-    _id:this._id,
-    email:this.email,
-    username:this.username,
+    _id: this._id,
+    email: this.email,
+    username: this.username,
 
   },
-  process.env.ACCESS_TOKEN_SECRET,
-  {
-    expiresIn:process.env.ACCESS_TOKEN_EXPIRY
-  }
+    process.env.ACCESS_TOKEN_SECRET,
+    {
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRY
+    }
   )
 }
-userSchema.methods.generateRefreshToken = function(){
+userSchema.methods.generateRefreshToken = function () {
   return jwt.sign({
-      _id:this._id,
-      
+    _id: this._id,
+
   },
-  process.env.REFRESH_TOKEN_SECRET,
-  {
-      expiresIn:process.env.REFRESH_TOKEN_EXPIRY
-  }
-)
+    process.env.REFRESH_TOKEN_SECRET,
+    {
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRY
+    }
+  )
 }
 
 // Index for faster queries

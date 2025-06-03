@@ -140,5 +140,7 @@ dist
 
 # SvelteKit build / generate output
 .svelte-kit
+#firebase service account json file
+chatting-app-25805-firebase-adminsdk-fbsvc-9aba1f9006.js
 
 # End of https://www.toptal.com/developers/gitignore/api/node

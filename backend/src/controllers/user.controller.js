@@ -6,6 +6,10 @@ import {ApiResponse} from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose"
 import { userHelpers } from "../models/index.js";
+import crypto from "crypto"
+import { sendEmail } from "../utils/sendEmail.js" // You create this function
+import bcrypt from "bcryptjs"
+
 
 
 
@@ -388,8 +392,83 @@ const searchUsers = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, users, "Search results"));
   });
   
-
+  const forgotPassword = async (req, res) => {
+    try {
+      const { email } = req.body;
   
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+  
+      const user = await User.findOne({ email });
+  
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+  
+      // Generate token
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+  
+      user.resetPasswordToken = hashedToken;
+      user.resetPasswordExpiry = Date.now() + 30 * 60 * 1000; // 30 minutes
+      await user.save({ validateBeforeSave: false });
+  
+      const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+  
+      const html = `
+        <p>You requested to reset your password.</p>
+        <p>Click <a href="${resetUrl}">here</a> to reset your password.</p>
+        <p>This link will expire in 30 minutes.</p>
+      `;
+  
+      await sendEmail(user.email, "Reset Your Password", html);
+  
+      res.status(200).json({ message: "Reset password link sent to email" });
+  
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+  };
+
+  const resetPassword = async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { password } = req.body;
+  
+      if (!password) {
+        return res.status(400).json({ message: "Password is required" });
+      }
+  
+      const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  
+      const user = await User.findOne({
+        resetPasswordToken: hashedToken,
+        resetPasswordExpiry: { $gt: Date.now() },
+      });
+  
+      if (!user) {
+        return res.status(400).json({ message: "Invalid or expired token" });
+      }
+  
+      // Hash new password
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+  
+      // Clear reset token
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpiry = undefined;
+  
+      await user.save();
+  
+      res.status(200).json({ message: "Password reset successful" });
+  
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+  };
 
 
 
@@ -403,7 +482,9 @@ export {
     updateProfilePic,
     getUserProfile,
     getCurrentProfile,
-    searchUsers
+    searchUsers,
+    forgotPassword,
+    resetPassword
 
 }
 

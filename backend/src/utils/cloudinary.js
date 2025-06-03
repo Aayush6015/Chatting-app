@@ -17,10 +17,14 @@ const uploadOnCloud = async(localFilePath) => {
         })
 
         console.log(`profile picture uploaded successfully on cloudinary`);
-        return response;
-    } catch (error) {
         fs.unlinkSync(localFilePath) // yeh toh hona hee chahiye - remove the locally saved temp file as the upload operation failed
-        return null
+        return response;
+
+    } catch (error) {
+        console.log(`Unable to upload to cloudinary`)
+        fs.unlinkSync(localFilePath) // yeh toh hona hee chahiye - remove the locally saved temp file as the upload operation failed
+        return null;
+
 
     }
 }

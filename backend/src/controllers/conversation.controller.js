@@ -7,10 +7,11 @@ import jwt from "jsonwebtoken"
 import mongoose from "mongoose"
 import Message from "../models/messages.model.js"
 import { conversationHelpers } from "../models/index.js";
+import redis  from "../utils/cache.js"
 
 
 const createOrGetConversation = asyncHandler(async (req, res) => {
-  const { targetUserId } = req.body;
+  const { targetUserId } = req.params;
 
   // Validate input
   if (!targetUserId) {
@@ -31,6 +32,12 @@ const createOrGetConversation = asyncHandler(async (req, res) => {
   await conversation.populate('participants', 'username profilePicture email');
   await conversation.populate('lastMessage');
 
+  const io = req.app.get("io");
+  conversation.participants.forEach(participantId => {
+    io.to(participantId.toString()).emit("conversation-updated", conversation);
+  });
+
+
   return res
     .status(200)
     .json(new ApiResponse(200, conversation, "Conversation fetched successfully"));
@@ -45,7 +52,13 @@ const getAllConversationsForUser = asyncHandler(async (req, res) => {
     .skip(skip)
     .limit(parseInt(limit))
     .populate("participants", "username profilePicture")
-    .populate("lastMessage");
+    .populate({
+      path: "lastMessage",
+      populate: {
+        path: "sender",
+        select: "username profilePicture"
+      }
+    });
 
   const total = await Conversation.countDocuments({ participants: userId });
 
@@ -91,7 +104,13 @@ const getConversationById = asyncHandler(async (req, res) => {
 
   const conversation = await Conversation.findById(conversationId)
     .populate('participants', 'username profilePicture email')
-    .populate('lastMessage');
+    .populate({
+      path: 'lastMessage',
+      populate: {
+        path: 'sender',
+        select: 'username profilePicture'
+      }
+    });
 
   const io = req.app.get("io");
   io.to(targetUserId.toString()).emit("new-conversation", conversation);

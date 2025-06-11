@@ -35,7 +35,7 @@
 // router.route("/update-profile-picture").post(verifyJwt, updateProfilePic)
 // router.route("/get-user-profile").post(verifyJwt, getUserProfile)
 // router.route("/user-profile").post(verifyJwt, getCurrentProfile)
-// router.route("/search-profiles").post(verifyJwt, searchUsers)
+// router.route("/search").post(verifyJwt, searchUsers)
 
 // // router.post("/register",upload.single("profilePicture"),userRegistration)
 // // router.route('/test').post(testRoute)
@@ -62,7 +62,7 @@ import multer from "multer";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
 import googleAuth from "../controllers/googleAuth.controller.js";
 import { verifyFirebaseToken } from "../middlewares/firebaseAuth.js";
-import resetRoutes from "./reset.routes.js"; // ✅ imported
+import resetRoutes from "./auth/reset.routes.js"; // ✅ imported
 
 const router = Router()
 const formParser = multer().none()
@@ -95,7 +95,7 @@ router.route("/get-user-profile").post(verifyJwt, getUserProfile);
 router.route("/user-profile").post(verifyJwt, getCurrentProfile);
 
 // Search
-router.route("/search-profiles").post(verifyJwt, searchUsers);
+router.route("/search").get(verifyJwt, searchUsers);
 
 // ✅ Reset Password Routes
 router.use("/auth", resetRoutes); // Adds /auth/request-reset and /auth/reset-password

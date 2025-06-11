@@ -1,5 +1,5 @@
 // models/index.js
-import {User} from './user.model.js';
+import { User } from './user.model.js';
 import Conversation from './conversation.model.js';
 import Message from './messages.model.js';
 import bcrypt from 'bcryptjs';
@@ -50,7 +50,13 @@ export const conversationHelpers = {
             participants: userId
         })
             .populate('participants', 'username profilePicture isOnline lastSeen')
-            .populate('lastMessage')
+            .populate({
+                path: 'lastMessage',
+                populate: {
+                    path: 'sender',
+                    select: 'username profilePicture'
+                }
+            })
             .sort({ lastActivity: -1 });
     },
 

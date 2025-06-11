@@ -1,5 +1,5 @@
 import express from "express";
-import { verifyGoogleToken } from "../../controllers/googleAuth.controller.js";
+import verifyGoogleToken  from "../../controllers/googleAuth.controller.js";
 
 const router = express.Router();
 

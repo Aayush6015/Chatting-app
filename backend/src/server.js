@@ -59,6 +59,8 @@ import { Server } from 'socket.io';
 import http from 'http';
 import jwt from 'jsonwebtoken';
 import redis from './utils/cache.js';
+import { verifySocketToken } from "./middlewares/auth.middleware.js";
+import { setupSocket } from "./utils/socketManager.js";
 
 // await redis.connect();
 
@@ -90,12 +92,23 @@ io.use((socket, next) => {
         next(new Error("Invalid token"));
     }
 });
+io.use(verifySocketToken);
+setupSocket(io);
 
 io.on("connection", (socket) => {
     console.log("User connected via socket:", socket.userId);
 
-    // Join user to their personal room (for notifications)
+    // Add user to online set
     if (socket.userId) {
+        onlineUsers.add(socket.userId);
+
+        // Send the current list of online users to this client
+        socket.emit("online-users", Array.from(onlineUsers));
+
+        // Notify other users that this user is online
+        socket.broadcast.emit("user-online", socket.userId);
+
+        // Join personal notification room
         socket.join(socket.userId);
         console.log(`Socket ${socket.id} joined room ${socket.userId}`);
     }
@@ -106,14 +119,14 @@ io.on("connection", (socket) => {
         console.log(`User ${socket.id} joined conversation ${conversationId}`);
     });
 
-    // Broadcast received message
+    // Handle new message
     socket.on("new-message", (message) => {
         const { conversationId, ...msgData } = message;
 
         // Emit to conversation room
         socket.to(conversationId).emit("receive-message", msgData);
 
-        // Emit real-time notification to all recipients
+        // Emit notification to recipients
         if (msgData.recipients && Array.isArray(msgData.recipients)) {
             msgData.recipients.forEach(recipientId => {
                 if (recipientId !== socket.userId) {
@@ -126,7 +139,7 @@ io.on("connection", (socket) => {
         }
     });
 
-    // Handle marking messages as read
+    // Mark messages as read
     socket.on("mark-read", ({ conversationId, readerId }) => {
         io.to(conversationId).emit("messages-read", {
             conversationId,
@@ -134,8 +147,14 @@ io.on("connection", (socket) => {
         });
     });
 
+    // On disconnect
     socket.on("disconnect", () => {
         console.log("User disconnected:", socket.userId);
+
+        if (socket.userId) {
+            onlineUsers.delete(socket.userId);
+            socket.broadcast.emit("user-offline", socket.userId);
+        }
     });
 });
 

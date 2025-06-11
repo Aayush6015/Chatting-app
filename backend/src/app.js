@@ -10,10 +10,11 @@ app.use(express.urlencoded({extended:true,limit:"16kb"}))
 
 // Then other middleware
 app.use(cors({
-    origin:process.env.CORS_ORIGIN,
+
+    origin:process.env.FRONTEND_URL,
     credentials:true
 }))
-
+console.log(`allowed frontend`,process.env.FRONTEND_URL);
 app.use(cookieParser())
 
 app.on("error",(error)=>{
@@ -31,5 +32,5 @@ import googleAuthRoutes from "./routes/auth/google.routes.js"
 app.use("/api/v1/users",userRouter)
 app.use("/api/v1/conversations",conversationRouter)
 app.use("/api/v1/messages",messageRouter)
-
+app.use("/api/v1/auth",googleAuthRoutes)// I don't know will this work or not
 export {app}

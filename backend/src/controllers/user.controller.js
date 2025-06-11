@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -55,6 +56,8 @@ const userRegistration = asyncHandler(async (req,res)=>{
 
 
     // const profilePicLocapPath = req.files?.profilePicture[0]?.path; // error
+    if(req.file)
+    {
     const profilePicLocalPath = req.file?.path;
 
     if(!profilePicLocalPath)
@@ -68,21 +71,26 @@ const userRegistration = asyncHandler(async (req,res)=>{
     {
         throw new ApiError(400,"Failed to upload on cloudinary");
     }
+  }
 
     const user = await User.create({
         email,
         username,
         password,
-        profilePicture:profilePic.url
+        profilePicture:req.file?profilePic.url:null
     })
 
     const createdUser = await User.findById(user._id)
-    .select("-password -refreshToken")
+    .select("-password -refreshToken");
 
     if(!createdUser)
     {
         throw new ApiError(500,"Something went wrong while registering the user.")
     }
+
+    const {accessToken,refreshToken} = await generateAccessAndRefereshTokens(user?._id)
+    user.refreshToken = refreshToken;
+    await user.save({validateBeforeSave:false});
 
     return res.status(201).json(new ApiResponse(200,createdUser,"User registered successfully"))
 
@@ -90,66 +98,52 @@ const userRegistration = asyncHandler(async (req,res)=>{
     // console.log(`${email}`);
 })
 
-const userLogin = asyncHandler(async(req,res)=>{
-
-    const {email,username,password} = req.body
-    // console.log(`${email}`);
-
-    if(!username && !email)
-    {
-        throw new ApiError(400,"Either Username or Email is required")
+const userLogin = asyncHandler(async (req, res) => {
+    const { identifier, password } = req.body;
+  
+    if (!identifier || !password) {
+      throw new ApiError(400, "Identifier and password are required");
     }
-    const user = await User.findOne({
-        $or:[{username},{email}] // finiding either by username or email
-    })
-
-    if(!user)
-    {
-        throw new ApiError(404,"User does not exist")
+  
+    const query = identifier.includes("@")
+      ? { email: identifier.toLowerCase() }
+      : { username: identifier };
+  
+    const user = await User.findOne(query);
+  
+    if (!user) {
+      throw new ApiError(404, "User does not exist");
     }
-
-    const isPasswordValid = await userHelpers.comparePassword(password,user.password)
-
-    if(!isPasswordValid)
-    {
-        throw new ApiError(401,"Invalid user credentials, please try again")
+  
+    const isPasswordValid = await userHelpers.comparePassword(password, user.password);
+  
+    if (!isPasswordValid) {
+      throw new ApiError(401, "Invalid user credentials, please try again");
     }
-
-    const {accessToken,refreshToken} = await generateAccessAndRefereshTokens(user?._id)
-
-    if(!accessToken)
-    {
-        throw new ApiError(500,"Not able to generate access token")
+  
+    const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(user._id);
+  
+    if (!accessToken || !refreshToken) {
+      throw new ApiError(500, "Token generation failed");
     }
-    if(!refreshToken)
-    {
-        throw new ApiError(500,"Not able to generate refresh token")
-    }
-
-    // console.log(`${email}  ${refreshToken}`);
-    const loggedInUser = await User.findById(user?._id).select("-password -refreshToken")
-
+  
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+  
     const options = {
-        httpOnly:true,
-        secure:true
-    }
-
+      httpOnly: true,
+      secure: true, // only over HTTPS
+      sameSite: "strict",
+    };
+  
     return res
-    .status(200)
-    .cookie("accessToken",accessToken,options)
-    .cookie("refreshToken",refreshToken,options)
-    .json(
-        new ApiResponse(
-            200,
-            {
-                user:loggedInUser,accessToken,refreshToken
-            },
-            "User logged in successfully"
-        )
-    )
-
-})
-
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(
+        new ApiResponse(200, { user: loggedInUser, accessToken, refreshToken }, "User logged in successfully")
+      );
+  });
+  
 const userLogout = asyncHandler(async(req,res)=>{
 
     console.log(req);
@@ -176,7 +170,6 @@ const userLogout = asyncHandler(async(req,res)=>{
     .clearCookie("refreshToken",options)
     .json( new ApiResponse(200,{},"User logged out successfully"))
 })
-
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
 
@@ -378,24 +371,40 @@ const getCurrentProfile = asyncHandler(async (req,res)=>{
 
 })
 
+// const searchUsers = asyncHandler(async (req, res) => {
+//   const query = req.query.q;
+//   const currentUserId = req.user._id;
+
+//   if (!query) {
+//     return res.status(400).json({ message: "Query is required" });
+//   }
+
+//   const users = await userHelpers.searchUsers(query, currentUserId); // use the helper
+//   res.json(users);
+// });
+  
 const searchUsers = asyncHandler(async (req, res) => {
-    const { query } = req.query;
-    if (!query?.trim()) throw new ApiError(400, "Search query not available");
-  
-    const users = await User.find({
-      $or: [
-        { username: { $regex: query, $options: "i" } },
-        { email: { $regex: query, $options: "i" } }
-      ]
-    }).select("username email profilePicture");
-  
-    res.status(200).json(new ApiResponse(200, users, "Search results"));
-  });
-  
-  const forgotPassword = async (req, res) => {
+  const username = req.query.username;
+
+  if (!username) {
+    console.log("username is absent")
+    return res.status(400).json({ message: "Username query is required." });
+  }
+
+  const users = await User.find({
+    _id: { $ne: req.user._id },
+    username: { $regex: username, $options: "i" }
+  }).select("username profilePicture isOnline");
+
+  console.log(users); // this is working
+  return res.status(200).json({ users });
+});
+
+
+const forgotPassword = async (req, res) => {
     try {
       const { email } = req.body;
-  
+      console.log(email, "received");
       if (!email) {
         return res.status(400).json({ message: "Email is required" });
       }
@@ -411,9 +420,9 @@ const searchUsers = asyncHandler(async (req, res) => {
       const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
   
       user.resetPasswordToken = hashedToken;
-      user.resetPasswordExpiry = Date.now() + 30 * 60 * 1000; // 30 minutes
+      user.resetPasswordExpires = Date.now() + 30 * 60 * 1000; // 30 minutes
       await user.save({ validateBeforeSave: false });
-  
+      console.log(process.env.FRONTEND_URL);
       const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
   
       const html = `
@@ -422,7 +431,13 @@ const searchUsers = asyncHandler(async (req, res) => {
         <p>This link will expire in 30 minutes.</p>
       `;
   
-      await sendEmail(user.email, "Reset Your Password", html);
+      try {
+        await sendEmail(user.email, "Reset Your Password", html);
+      } catch (error) {
+        console.log('Error sending email:',error.message);
+        return res.status(500).json({message:"failed to send email"})
+        
+      }
   
       res.status(200).json({ message: "Reset password link sent to email" });
   
@@ -432,44 +447,50 @@ const searchUsers = asyncHandler(async (req, res) => {
     }
   };
 
-  const resetPassword = async (req, res) => {
+const resetPassword = async (req, res) => {
     try {
-      const { token } = req.params;
+      const { resetToken } = req.params;
       const { password } = req.body;
+      if(!resetToken)
+      {
+        console.log(`reset token is missing`)
+        throw new ApiError(400,"reset token is missing")
+      }
   
-      if (!password) {
+      if (!password || password.trim() === "") {
         return res.status(400).json({ message: "Password is required" });
       }
   
-      const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+      // Hash the token to match the stored one
+      const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
   
+      // Find user with valid token and not expired
       const user = await User.findOne({
         resetPasswordToken: hashedToken,
-        resetPasswordExpiry: { $gt: Date.now() },
+        resetPasswordExpires: { $gt: Date.now() },
       });
   
       if (!user) {
         return res.status(400).json({ message: "Invalid or expired token" });
       }
   
-      // Hash new password
-      const salt = await bcrypt.genSalt(10);
-      user.password = await bcrypt.hash(password, salt);
+      // Set new password (bcrypt hash is already handled in model's pre-save hook)
+      user.password = password;
   
-      // Clear reset token
+      // Clear reset fields
       user.resetPasswordToken = undefined;
-      user.resetPasswordExpiry = undefined;
+      user.resetPasswordExpires = undefined;
   
       await user.save();
   
-      res.status(200).json({ message: "Password reset successful" });
+      return res.status(200).json({ message: "Password reset successful" });
   
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Internal Server Error" });
+      console.error("Reset password error:", error);
+      return res.status(500).json({ message: "Internal Server Error" });
     }
   };
-
+  
 
 
 export {
@@ -484,7 +505,8 @@ export {
     getCurrentProfile,
     searchUsers,
     forgotPassword,
-    resetPassword
+    resetPassword,
+  
 
 }
 

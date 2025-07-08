@@ -43,32 +43,55 @@ const createOrGetConversation = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, conversation, "Conversation fetched successfully"));
 });
 
+// const getAllConversationsForUser = asyncHandler(async (req, res) => {
+//   const userId = req.user._id;
+//   const { page = 1, limit = 10 } = req.query;
+//   const skip = (parseInt(page) - 1) * parseInt(limit);
+//   const conversations = await conversationHelpers.getUserConversationsWithDetails(userId)
+//     .sort({ updatedAt: -1 })
+//     .skip(skip)
+//     .limit(parseInt(limit))
+//     .populate("participants", "username profilePicture")
+//     .populate({
+//       path: "lastMessage",
+//       populate: {
+//         path: "sender",
+//         select: "username profilePicture"
+//       }
+//     });
+
+//   const total = await Conversation.countDocuments({ participants: userId });
+
+
+//   return res.status(200).json(new ApiResponse(200, {
+//     conversations,
+//     totalPages: Math.ceil(total / limit),
+//     currentPage: parseInt(page)
+//   }, "Conversations fetched"));
+// });
+
 const getAllConversationsForUser = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 50 } = req.query;
   const skip = (parseInt(page) - 1) * parseInt(limit);
-  const conversations = await conversationHelpers.getUserConversationsWithDetails(userId)
-    .sort({ updatedAt: -1 })
-    .skip(skip)
-    .limit(parseInt(limit))
-    .populate("participants", "username profilePicture")
-    .populate({
-      path: "lastMessage",
-      populate: {
-        path: "sender",
-        select: "username profilePicture"
-      }
-    });
 
-  const total = await Conversation.countDocuments({ participants: userId });
+  const conversationsArray = await conversationHelpers.getUserConversationsWithDetails(userId);
 
+  const sortedConversations = conversationsArray.sort(
+    (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
+  );
+
+  const paginatedConversations = sortedConversations.slice(skip, skip + parseInt(limit));
+
+  // You may populate manually if needed (or enhance getUserConversationsWithDetails to return populated versions)
 
   return res.status(200).json(new ApiResponse(200, {
-    conversations,
-    totalPages: Math.ceil(total / limit),
+    conversations: paginatedConversations,
+    totalPages: Math.ceil(conversationsArray.length / limit),
     currentPage: parseInt(page)
   }, "Conversations fetched"));
 });
+
 
 const deleteConversation = asyncHandler(async (req, res) => {
   const { conversationId } = req.body;
@@ -101,7 +124,8 @@ const deleteConversation = asyncHandler(async (req, res) => {
 
 const getConversationById = asyncHandler(async (req, res) => {
   const { conversationId } = req.params;
-
+  
+  
   const conversation = await Conversation.findById(conversationId)
     .populate('participants', 'username profilePicture email')
     .populate({
@@ -111,13 +135,13 @@ const getConversationById = asyncHandler(async (req, res) => {
         select: 'username profilePicture'
       }
     });
+    if (!conversation) {
+      throw new ApiError(404, "Conversation not found");
+    }
 
-  const io = req.app.get("io");
-  io.to(targetUserId.toString()).emit("new-conversation", conversation);
-
-  if (!conversation) {
-    throw new ApiError(404, "Conversation not found");
-  }
+  // conversation.participants.forEach(participant => {
+  //   io.to(participant?._id.toString()).emit("new-conversation",conversation);
+  // })
 
   return res
     .status(200)

@@ -30,15 +30,17 @@ const sendMessage = asyncHandler(async (req, res) => {
     if (!conversation.participants.includes(req.user._id)) {
         throw new ApiError(403, "You are not a participant in this conversation");
     }
-
-
-    if (!conversation) {
-        throw new ApiError(404, "Conversation not found");
-    }
-
     const message = await messageHelpers.createMessage(conversationId, req.user._id, content, messageType);
 
     await redis.del(`messages:${conversationId}:page:1:limit:50`);
+
+    conversation.lastMessage = message._id;
+    conversation.lastMessagePreview = {
+      content: message.content,
+      sender: message.sender,
+      timestamp: message.createdAt,
+    };
+    await conversation.save();
 
     const io = req.app.get("io");
     io.to(conversationId).emit("receive-message", message);
@@ -72,12 +74,17 @@ const getMessages = asyncHandler(async (req, res) => {
     const messages = await Message.find({conversation:conversationId})
     .sort({ createdAt: -1 }) // latest first
     .skip(skip)
-    .limit(parseInt(limit));
+    .limit(parseInt(limit)); 
 
     const totalMessages = await Message.countDocuments({conversation:conversationId});
 
     // saving to cache
-    await redis.setex(cacheKey, 60 * 5, JSON.stringify(messages)); // cache for 5 mins
+    const responsePayload = {
+        messages,
+        totalPages:Math.ceil(totalMessages/limit),
+        currentPage:parseInt(page)
+    }
+    await redis.setex(cacheKey, 60 * 5, JSON.stringify(responsePayload)); // cache for 5 mins
 
     return res.status(200).json(new ApiResponse(200, {
         messages,
@@ -99,14 +106,12 @@ const markAsRead = asyncHandler(async (req, res) => {
     io.to(conversationId).emit("messages-read", {
         conversationId,
         readerId: req.user._id,
-      });
+      }); // this was giving issue while testing with postman
 
     return res.status(200).json(new ApiResponse(200, { updatedCount: result.modifiedCount }, "All messages marked as read"));
 
     // return res.status(200).json(new ApiResponse(200, {}, "All messages marked as read"));
 });
-
-
 
 // 4. Get unread message count
 const getUnreadCount = asyncHandler(async (req, res) => {
@@ -134,6 +139,12 @@ const deleteMessage = asyncHandler(async (req, res) => {
 
     await message.deleteOne();
 
+    const io = req.app.get("io"); // <-- make sure you store io on app
+  io.to(conversationId).emit("message-deleted", {
+    messageId,
+    conversationId,
+  }); 
+
     return res.status(200).json(new ApiResponse(200, {}, "Message deleted successfully"));
 });
 
@@ -151,7 +162,7 @@ const editMessage = asyncHandler(async (req, res) => {
     message.content = newContent;
     message.edited = true;
     await message.save();
-
+    const conversationId = message.conversation.toString();
     await redis.del(`messages:${conversationId}:page:1`);
 
     return res.status(200).json(new ApiResponse(200, message, "Message edited successfully"));

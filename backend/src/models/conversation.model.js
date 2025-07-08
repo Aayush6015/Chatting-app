@@ -12,9 +12,14 @@ const conversationSchema = new mongoose.Schema({
     enum: ['private'], // Will add 'group' in Phase 3
     default: 'private'
   },
+  lastMessagePreview: {
+    content: { type: String },
+    sender: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    timestamp: { type: Date }
+  },
   lastMessage: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Message'
+    ref: "Message", // ✅ assumes you have a Message model
   },
   lastActivity: {
     type: Date,

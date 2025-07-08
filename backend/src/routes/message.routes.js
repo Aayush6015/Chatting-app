@@ -8,8 +8,10 @@ import {
   deleteMessage,
   editMessage,
 } from "../controllers/message.controller.js";
+import multer from "multer";
 
 const router = express.Router();
+const formParser = multer().none();
 
 // Send and fetch messages
 router
@@ -30,6 +32,6 @@ router
 router
   .route("/single/:messageId")
   .delete(verifyJwt, deleteMessage) // Delete a message
-  .patch(verifyJwt, editMessage);   // Edit a message
+  .patch(verifyJwt,formParser, editMessage);   // Edit a message
 
 export default router;

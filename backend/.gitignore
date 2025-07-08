@@ -143,4 +143,6 @@ dist
 #firebase service account json file
 chatting-app-25805-firebase-adminsdk-fbsvc-9aba1f9006.js
 
+.package-lock.json
+
 # End of https://www.toptal.com/developers/gitignore/api/node

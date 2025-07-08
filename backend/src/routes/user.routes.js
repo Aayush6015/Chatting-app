@@ -56,7 +56,8 @@ import {
     userLogout,
     userRegistration,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    verifyPassword
 } from "../controllers/user.controller.js";
 import multer from "multer";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
@@ -69,26 +70,29 @@ const formParser = multer().none()
 
 // Google Auth Registration
 router.route('/register/google').post(
-    verifyFirebaseToken,
-    upload.single('profilePicture'),
+    // verifyFirebaseToken,
+    formParser,
+    // upload.single('profilePicture'),
+    
     userRegistration
 );
 
 // Google Auth Button
-router.route("/google-auth").post(
-    formParser,
-    upload.single('profilePicture'),
-    googleAuth
-);
+// router.route("/google-auth").post(
+//     formParser,
+//     upload.single('profilePicture'),
+//     googleAuth
+// );
 
 // Login/Logout
 router.route("/login").post(formParser, userLogin);
 router.route("/logout").post(verifyJwt, userLogout);
+// router.route("/logout").post( userLogout);
 
 // Account Updates
-router.route("/change-password").post(verifyJwt, changeCurrentPassword);
-router.route("/update-details").post(verifyJwt, updateAccountDetails);
-router.route("/update-profile-picture").post(verifyJwt, updateProfilePic);
+router.route("/update-password").post(verifyJwt, changeCurrentPassword);
+router.route("/update-username").post(verifyJwt, updateAccountDetails);
+router.route("/update-profile-picture").post(verifyJwt,upload.single("profilePicture") ,updateProfilePic);
 
 // Profile Fetch
 router.route("/get-user-profile").post(verifyJwt, getUserProfile);
@@ -101,6 +105,8 @@ router.route("/search").get(verifyJwt, searchUsers);
 router.use("/auth", resetRoutes); // Adds /auth/request-reset and /auth/reset-password
 router.route('/forgot-password').post(forgotPassword)
 router.route('/reset-password/:resetToken').post(resetPassword)
+//verify password
+router.route("/verify-password").post(verifyJwt,verifyPassword);
 
 
 export default router;

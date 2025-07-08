@@ -11,7 +11,7 @@ const googleAuth = async (req, res) => {
   }
 
   const decoded = await admin.auth().verifyIdToken(idToken);
-  const { email, name, picture } = decoded;
+  const { email, name, picture:googlePicture} = decoded;
 
   // Check if user exists
   let user = await User.findOne({ email });
@@ -20,7 +20,11 @@ const googleAuth = async (req, res) => {
   {
     throw new ApiError(400,"User with this email already exists");
   }
-
+ let profilePicture = googlePicture;
+ if(req.file)
+ {
+  const uploadResult = await uploa
+ }
   if (!user) {
     // Temporarily create a user with just email, let frontend ask for username/password
     user = new User({

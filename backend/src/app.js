@@ -11,7 +11,7 @@ app.use(express.urlencoded({extended:true,limit:"16kb"}))
 // Then other middleware
 app.use(cors({
 
-    origin:process.env.FRONTEND_URL,
+    origin:"http://localhost:5173",
     credentials:true
 }))
 console.log(`allowed frontend`,process.env.FRONTEND_URL);
@@ -29,6 +29,7 @@ import messageRouter from "./routes/message.routes.js"
 import googleAuthRoutes from "./routes/auth/google.routes.js"
 
 //routes declaration
+app.use("/static", express.static("public"));
 app.use("/api/v1/users",userRouter)
 app.use("/api/v1/conversations",conversationRouter)
 app.use("/api/v1/messages",messageRouter)

@@ -70,7 +70,7 @@
 // };
 
 // export default SearchBar;
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef} from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { searchUsers } from "../../features/search/searchSlice.js";
 import {
@@ -82,6 +82,7 @@ const SearchBar = ({ onUserSelect }) => {
   const dispatch = useDispatch();
   const [query, setQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const wrapper = useRef(null);
 
 
   const { users: searchResults = [], loading = false } = useSelector(
@@ -114,6 +115,20 @@ const SearchBar = ({ onUserSelect }) => {
   
     return () => clearTimeout(delayDebounce);
   }, [query, dispatch]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (wrapper.current && !wrapper.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+  
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+  
   
 
   const handleUserSelect = async (user) => {
@@ -133,13 +148,16 @@ const SearchBar = ({ onUserSelect }) => {
   };
 
   return (
-    <div className="p-2 border-b relative">
+    <div className="relative" ref={wrapper}>
       <input
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search users..."
-        className="w-full p-2 rounded border dark:bg-gray-800 dark:text-white"
+        onFocus={()=>{
+          if(query.trim() ) setShowDropdown(true);
+        }}
+        placeholder="Search "
+        className="w-full py-2 px-4 m-1 rounded-xl border bg-black text-white "
       />
 
       {loading && <p className="text-sm text-gray-500 mt-1">Searching...</p>}
@@ -147,7 +165,7 @@ const SearchBar = ({ onUserSelect }) => {
       {showDropdown && (
         <ul className="absolute z-10 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded shadow">
           {searchResults.length === 0 && !loading && (
-            <li className="p-2 text-gray-500 text-sm">No users found</li>
+            <li className="p-2 text-white text-sm">No users found</li>
           )}
 
           {searchResults.map((user) => {

@@ -26,6 +26,7 @@ const SocketEvents = () => {
     socket.on("receive-message", (messageData) => {
       dispatch(receiveMessage({
         conversationId: messageData.conversationId,
+        tempId:messageData.tempId,
         message: messageData,
       }));
     });

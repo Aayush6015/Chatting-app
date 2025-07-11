@@ -7,10 +7,10 @@ const SettingsButton = () => {
   return (
     <button
       onClick={() => navigate("/settings")}
-      className="w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 text-left"
+      className="w-3/4 mx-auto border-2 border-white justify-center rounded-xl cursor-pointer flex items-center gap-2 px-4 py-3 hover:bg-white hover:text-black text-center"
     >
       <Settings className="w-5 h-5" />
-      <span className="text-sm font-medium">Settings</span>
+      <span className="text-sm text-center font-medium">Settings</span>
     </button>
   );
 };

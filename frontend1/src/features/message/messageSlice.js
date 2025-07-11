@@ -120,6 +120,21 @@ const messageSlice = createSlice({
         (msg) => msg._id !== messageId
       );
     },
+    replaceTempMessage: (state, action) => {
+      const { conversationId, tempId, message } = action.payload;
+    
+      const messages = state.conversationMessages[conversationId];
+      if (!messages) return;
+    
+      const index = messages.findIndex((m) => m._id === tempId);
+    
+      if (index !== -1) {
+        messages[index] = message; // Replace temp with real
+      } else {
+        messages.push(message); // If temp not found, just add
+      }
+    },
+    
   },
   extraReducers: (builder) => {
     builder
@@ -156,5 +171,5 @@ const messageSlice = createSlice({
   },
 });
 
-export const { addMessage, markMessagesAsRead, deleteMessage } = messageSlice.actions;
+export const { addMessage, markMessagesAsRead, deleteMessage, replaceTempMessage } = messageSlice.actions;
 export default messageSlice.reducer;

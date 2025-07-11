@@ -24,7 +24,9 @@ const App = () => {
       <Routes>
         {/* Auth Routes */}
         {/* <Route path="/" element={<Login />} /> */}
+        <Route path="/" element={ <Login />} />
         <Route path="/login" element={user ? <Navigate to="/chat" /> : <Login />} />
+        
         <Route path="/register" element={user ? <Navigate to="/chat" /> : <Register />} />
 
         {/* Protected Route */}

@@ -102,7 +102,7 @@ const markAsRead = asyncHandler(async (req, res) => {
         { conversation: conversationId, readBy: { $ne: req.user._id } },
         { $addToSet: { readBy: req.user._id } }
     );
-
+    const io = req.app.get("io");
     io.to(conversationId).emit("messages-read", {
         conversationId,
         readerId: req.user._id,
@@ -125,6 +125,7 @@ const getUnreadCount = asyncHandler(async (req, res) => {
 // 5. Delete a message (optional)
 const deleteMessage = asyncHandler(async (req, res) => {
     const { messageId } = req.params;
+    console.log(messageId)
     const message = await Message.findById(messageId);
 
     if (!message || message.sender.toString() !== req.user._id.toString()) {
@@ -144,6 +145,7 @@ const deleteMessage = asyncHandler(async (req, res) => {
     messageId,
     conversationId,
   }); 
+  io.to(req.user._id.toString()).emit("message-deleted",{messageId, conversationId});
 
     return res.status(200).json(new ApiResponse(200, {}, "Message deleted successfully"));
 });

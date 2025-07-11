@@ -189,11 +189,11 @@ const LoginForm = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email/Username Input */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="text-sm font-medium text-white dark:text-white">
                 Email or Username
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-300 w-5 h-5" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white w-5 h-5" />
                 <Input
                   name="identifier"
                   placeholder="Email/Username"

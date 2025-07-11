@@ -39,9 +39,9 @@ import LogoutButton from "../auth/LogoutButton";
 
 const Sidebar = ({ onConversationSelect }) => {
   return (
-    <div className="w-full sm:w-1/3 lg:w-1/4 h-full flex flex-col bg-black border-r border-orange-600">
+    <div className="w-full h-full flex flex-col bg-black border-r border-white">
       {/* Search */}
-      <div className="p-4 border-b border-orange-600">
+      <div className="p-4 border-b-4 border-white">
         <SearchBar onUserSelect={onConversationSelect} />
       </div>
 
@@ -51,7 +51,7 @@ const Sidebar = ({ onConversationSelect }) => {
       </div>
 
       {/* Footer buttons */}
-      <div className="p-3 border-t border-orange-600 flex flex-col gap-2">
+      <div className="p-3 border-t border-white flex flex-col gap-2">
         <SettingsButton />
         <LogoutButton />
       </div>

@@ -119,7 +119,7 @@
 //         socket.join(conversationId);
 //         console.log(`User ${socket.id} joined conversation ${conversationId}`);
 //     });
-    
+
 //     socket.on("join-user-room",(userId)=>{
 //         socket.join(userId);
 //         console.log(`Socket ${socket.id} joined personal room: ${userId}`)
@@ -314,16 +314,45 @@ io.on("connection", (socket) => {
   console.log(`Socket ${socket.id} joined room: ${userId}`);
 
   // Join conversation room
-  // socket.on("join-conversation", (conversationId) => {
-  //   socket.join(conversationId);
-  //   console.log(`User ${socket.id} joined conversation ${conversationId}`);
-  // });
+  socket.on("join-conversation", (conversationId) => {
+    console.log("from server.js")
+    socket.join(conversationId);
+    console.log(`User ${socket.id} joined conversation ${conversationId}`);
+  });
 
   // Send-message logic
-  socket.on("send-message", async (data) => {
-    console.log("received data",data);
+  // socket.on("send-message", async (data) => {
+  //   console.log("received data",data);
 
-    const { conversationId, sender, content, receiverId } = data;
+  //   const { conversationId, sender, content, receiverId,tempId } = data;
+
+  //   try {
+  //     const newMessage = await Message.create({
+  //       sender,
+  //       content,
+  //       conversation: conversationId,
+  //     });
+
+  //     const receiverSocketId = onlineUsers.get(receiverId);
+
+  //     if (receiverSocketId && receiverSocketId!==socket.id) {
+  //       io.to(receiverSocketId).emit("receive-message", {
+  //         ...newMessage.toObject(),
+  //         conversationId,
+  //         tempId,
+  //       });
+  //     }
+
+  //   } catch (error) {
+  //     console.error("💥 Error sending message:", error);
+  //     socket.emit("error", "Message could not be sent");
+  //   }
+  // });
+
+  socket.on("send-message", async (data) => {
+    console.log("received data", data);
+
+    const { conversationId, sender, content, receiverId, tempId } = data;
 
     try {
       const newMessage = await Message.create({
@@ -334,22 +363,28 @@ io.on("connection", (socket) => {
 
       const receiverSocketId = onlineUsers.get(receiverId);
 
-      if (receiverSocketId && receiverSocketId!==socket.id) {
+      // ✅ Send to receiver if online & not self
+      if (receiverSocketId && receiverSocketId !== socket.id) {
         io.to(receiverSocketId).emit("receive-message", {
           ...newMessage.toObject(),
-          conversationId,
+          conversation: conversationId, // NOTE: use same key as client expects
+          tempId, // ✅ So they know it’s linked
         });
       }
 
-      // socket.emit("receive-message", {
-      //   ...newMessage.toObject(),
-      //   conversationId,
-      // });
+      // ✅ Always send back to sender too — so they can replace temp message
+      socket.emit("receive-message", {
+        ...newMessage.toObject(),
+        conversation: conversationId,
+        tempId,
+      });
+
     } catch (error) {
       console.error("💥 Error sending message:", error);
       socket.emit("error", "Message could not be sent");
     }
   });
+
 
   // Mark as read
   socket.on("mark-read", ({ conversationId, readerId }) => {

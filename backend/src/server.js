@@ -349,6 +349,37 @@ io.on("connection", (socket) => {
   //   }
   // });
 
+  socket.on("edit-message", async ({ messageId, newContent }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (!message) {
+        socket.emit("error", "Message not found");
+        return;
+      }
+      if (message.sender.toString() != socket.userId.toString()) {
+        socket.emit("error", "Not authorized");
+        return ;
+
+      }
+      message.content = newContent;
+      message.edited = true;
+      await message.save();
+
+      const conversationId = message.conversation.toString();
+      await redis.del(`message:${conversationId}:page:1`); // deleting from cache
+
+      io.to(conversationId).emit("message-edited",{
+        conversationId,
+        messageId,
+        newContent,
+      });
+
+    } catch (error) {
+        console.log(error);
+        socket.emit("error","could not edit message");
+    }
+  });
+
   socket.on("send-message", async (data) => {
     console.log("received data", data);
 

@@ -134,6 +134,20 @@ const messageSlice = createSlice({
         messages.push(message); // If temp not found, just add
       }
     },
+    updateEditedMessage:(state,action)=>{
+      const {conversationId,messageId,newContent} = action.payload;
+      const messages = state.conversationMessages[conversationId];
+      if(messages)
+      {
+        const msg = messages.find((m)=>m._id === messageId);
+        if(msg)
+        {
+          msg.content = newContent;
+          msg.edited = true; //idhar se comment kar raha hu kyuki kahi aur bhi isko true kiya hai
+
+        }
+      }
+    }
     
   },
   extraReducers: (builder) => {
@@ -171,5 +185,5 @@ const messageSlice = createSlice({
   },
 });
 
-export const { addMessage, markMessagesAsRead, deleteMessage, replaceTempMessage } = messageSlice.actions;
+export const { addMessage, markMessagesAsRead, deleteMessage, replaceTempMessage, updateEditedMessage} = messageSlice.actions;
 export default messageSlice.reducer;

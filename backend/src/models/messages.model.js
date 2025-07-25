@@ -17,6 +17,10 @@ const messageSchema = new mongoose.Schema({
     enum: ['text', 'image', 'file'], // Will expand in later phases
     default: 'text'
   },
+  edited:{
+    type:Boolean,
+    default:false,
+  },
   content: {
     type: String,
     required: function () {

@@ -46,11 +46,13 @@ const MessageBubble = ({ message }) => {
         className={`max-w-[95%] items-center my-0 pl-5 pr-0 py-0.5 rounded-xl text-l  relative `}
       >
         <div className="font-semibold">{message.content}</div>
-        <div className=" text-xs text-right mt-1"> {/* Custom class for timestamp color */}
+        <div className=" text-xs text-right mt-1"> 
+          {message.edited && (<span className="text-xs  text-gray-400"> edited   </span>)}
           {new Date(message.createdAt).toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           })}
+          
         </div>
       </div>
     </div>

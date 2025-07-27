@@ -67,32 +67,6 @@ export const logoutUser = createAsyncThunk(
   }
 );
 
-// export const registerUser = createAsyncThunk(
-//   "auth/registerUser",
-//   async ({ email, password, username, profilePicture }, thunkAPI) => {
-//     try {
-//       const formData = new FormData();
-//       formData.append("email", email);
-//       formData.append("password", password);
-//       formData.append("username", username);
-
-//       if (profilePicture) {
-//         formData.append("profilePicture", profilePicture);
-//       }
-
-//       const response = await axios.post("http://localhost:3000/api/v1/users/register/google", formData, {
-//         withCredentials: true,
-//         headers: {
-//           "Content-Type": "multipart/form-data",
-//         },
-//       });
-
-//       return response.data;
-//     } catch (error) {
-//       return thunkAPI.rejectWithValue(error.response?.data?.message || "Registration failed");
-//     }
-//   }
-// );
 
 
 export const sendResetLink = createAsyncThunk(

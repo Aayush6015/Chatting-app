@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { auth, provider } from "../../firebase/firebase.js";
 import { signInWithPopup } from "firebase/auth";
@@ -5,7 +6,7 @@ import { useDispatch } from "react-redux";
 import { registerUser } from "../../features/auth/authSlice";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { getIdToken } from "firebase/auth";
+import { Eye, EyeOff } from "lucide-react";
 
 const RegisterForm = () => {
   const dispatch = useDispatch();
@@ -25,7 +26,6 @@ const RegisterForm = () => {
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      console.log("this is user email id - ",user.email)
       setFirebaseEmail(user.email);
       setShowForm(true);
       toast.success("Google authentication successful!");
@@ -41,51 +41,23 @@ const RegisterForm = () => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // const handleSubmit = async (e) => {
-
-  //   e.preventDefault();
-  //   setLoading(true);
-  //   try {
-  //     const res = await dispatch(
-  //       registerUser({
-  //         email: firebaseEmail,
-  //         username: formData.username,
-  //         password: formData.password,
-  //       })
-  //     );
-  //     if (registerUser.fulfilled.match(res)) {
-  //       toast.success("Registration successful");
-  //       navigate("/login");
-  //     } else {
-  //       toast.error(res.payload || "Registration failed");
-  //     }
-  //   } catch (err) {
-  //     console.error(err);
-  //     toast.error("Unexpected error during registration");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-  
-    try {
 
+    try {
       const currentUser = auth.currentUser;
-      // const idToken = await getIdToken(currentUser);
-      const idToken = await currentUser.getIdToken()
-      console.log("this is user id token",idToken)
+      const idToken = await currentUser.getIdToken();
+
       const formDataToSend = new FormData();
       formDataToSend.append("email", firebaseEmail);
       formDataToSend.append("username", formData.username);
       formDataToSend.append("password", formData.password);
-      // Optional: if you want to allow user to upload profilePicture
-      // formDataToSend.append("profilePicture", file);
-  
-      const res = await dispatch(registerUser({formData:formDataToSend,idToken}));
-  
+
+      const res = await dispatch(
+        registerUser({ formData: formDataToSend, idToken })
+      );
+
       if (registerUser.fulfilled.match(res)) {
         toast.success("Registration successful");
         navigate("/login");
@@ -99,7 +71,6 @@ const RegisterForm = () => {
       setLoading(false);
     }
   };
-  
 
   const handleBackToGoogle = () => {
     setShowForm(false);
@@ -109,60 +80,85 @@ const RegisterForm = () => {
 
   return (
     <div>
-      <h1>{!showForm ? "Register" : "Complete Registration"}</h1>
-
       {!showForm ? (
-        <div>
-          <button onClick={handleGoogleSignIn} disabled={loading}>
+        <div className="text-center ">
+          <button
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="w-full bg-white text-black font-semibold border-2 border-white py-3 px-6 rounded-xl hover:bg-black transition-colors disabled:opacity-50 hover:text-white"
+          >
             {loading ? "Connecting to Google..." : "Continue with Google"}
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit}>
-          <button type="button" onClick={handleBackToGoogle}>
-            Back to Google Sign-in
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <button
+            type="button"
+            onClick={handleBackToGoogle}
+            className="text-sm text-blue-400 hover:underline"
+          >
+            Back to Google Sign-In
           </button>
 
           <div>
-            <p>Email verified: {firebaseEmail}</p>
+            <p className="text-l text-white font-semibold">
+              Email verified: {firebaseEmail}
+            </p>
           </div>
 
           <div>
-            <label>Username</label>
+            <label className="block text-white ml-1 font-semibold text-l mb-1">Username</label>
             <input
               type="text"
               name="username"
               value={formData.username}
               onChange={handleChange}
               required
+              placeholder="Enter username"
+              className="w-full px-4 py-3 rounded-xl bg-black text-white border-2 border-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
             />
           </div>
 
           <div>
-            <label>Password</label>
-            <input
-              type={showPassword ? "text" : "password"}
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? "Hide" : "Show"}
-            </button>
+            <label className="block text-white text-l ml-1 mb-1">Password</label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="Enter password"
+                className="w-full px-4 py-3 rounded-xl bg-black text-white border-2 border-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-white underline"
+              >
+                {showPassword ? <Eye size={20}/> : <EyeOff size = {20}/>}
+              </button>
+            </div>
           </div>
 
-          <button type="submit" disabled={loading}>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-white border-2 border-white text-black font-semibold py-3 px-6 rounded-xl hover:bg-black hover:text-white transition-colors disabled:opacity-50"
+          >
             {loading ? "Creating Account..." : "Complete Registration"}
           </button>
         </form>
       )}
 
-      <p>
-        Already have an account? <Link to="/login">Sign in</Link>
+      <p className="mt-6 text-sm text-white text-center">
+        Already have an account?{" "}
+        <Link
+          to="/login"
+          className="text-blue-400 hover:underline"
+        >
+          Back to Login
+        </Link>
       </p>
     </div>
   );

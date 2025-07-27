@@ -12,24 +12,6 @@ export const fetchConversations = createAsyncThunk("conversations/fetch", async 
 });
 
 
-// export const updateConversationPreview = createAsyncThunk(
-//   "conversations/updatePreview",
-//   async ({ conversationId, lastMessageContent, senderId }, thunkAPI) => {
-//     try {
-//       const { data } = await axios.patch(
-//         `http://localhost:3000/api/v1/conversations/${conversationId}/preview`,
-//         { lastMessageContent, senderId },
-//         { withCredentials: true }
-//       );
-//       return data.data;
-//     } catch (error) {
-//       return thunkAPI.rejectWithValue(
-//         error.response?.data?.message || "Failed to update preview"
-//       );
-//     }
-//   }
-// );
-
 export const createOrGetConversation = createAsyncThunk(
   "conversations/createOrGet",
   async (targetUserId, thunkAPI) => {

@@ -43,33 +43,6 @@ const createOrGetConversation = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, conversation, "Conversation fetched successfully"));
 });
 
-// const getAllConversationsForUser = asyncHandler(async (req, res) => {
-//   const userId = req.user._id;
-//   const { page = 1, limit = 10 } = req.query;
-//   const skip = (parseInt(page) - 1) * parseInt(limit);
-//   const conversations = await conversationHelpers.getUserConversationsWithDetails(userId)
-//     .sort({ updatedAt: -1 })
-//     .skip(skip)
-//     .limit(parseInt(limit))
-//     .populate("participants", "username profilePicture")
-//     .populate({
-//       path: "lastMessage",
-//       populate: {
-//         path: "sender",
-//         select: "username profilePicture"
-//       }
-//     });
-
-//   const total = await Conversation.countDocuments({ participants: userId });
-
-
-//   return res.status(200).json(new ApiResponse(200, {
-//     conversations,
-//     totalPages: Math.ceil(total / limit),
-//     currentPage: parseInt(page)
-//   }, "Conversations fetched"));
-// });
-
 const getAllConversationsForUser = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { page = 1, limit = 50 } = req.query;
